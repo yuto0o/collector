@@ -1,0 +1,17 @@
+aiohttp
+requests
+beautifulsoup4
+python-dotenv
+sqlalchemy
+alembic
+slack_sdk
+fastapi
+uvicorn[standard]
+httpx
+lxml
+APScheduler
+tenacity
+pytest
+pytest-asyncio
+feedparser
+bs4

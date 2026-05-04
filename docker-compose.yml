@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  collector:
+    build: .
+    container_name: collector
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    restart: unless-stopped
+    depends_on: []
+    ports:
+      - "8000:8000"
