@@ -3,52 +3,32 @@
 技術記事の自動収集・要約・有用性判定通知システム。
 
 ## プロジェクト概要
-このプロジェクトは、Python学習歴3年程度の学生をターゲットに、国内外の主要な技術メディア、コミュニティ、ブログから「本当に有用な情報」だけを抽出し、日本語で要約してSlackに通知する自動化システムです。
+このプロジェクトは、Python学習歴3年以上の高度な知識を持つ学生をターゲットに、国内外の主要な技術メディア、コミュニティ、ブログから厳選された知見を抽出し、日本語で要約してSlackに通知する自動化システムです。
 
 ## 主要機能
-1.  **マルチサイト横断検索・収集**
-    *   SearXNGを活用し、28の主要技術サイトを横断的に検索。
-    *   ZennについてはRSSフィードによる補完的な収集も実施。
-    *   **期間フィルタリング:** 公開から14日（2週間）以内の新しい記事のみを対象。
-2.  **インテリジェントな本文抽出**
-    *   Scraplingライブラリ（Playwright/Fetcher）を使用し、動的なコンテンツを含む記事からも本文を正確に抽出。
-3.  **LLMによる有用性判定と要約**
-    *   ローカルLLM（Llama API互換）を使用。
-    *   **判定基準:** 「Python歴3年の学生」にとって、基礎を超えた実用的な知見、技術的深み、あるいは興味深いトレンドが含まれているか。
-    *   **出力:** 要約（日本語）、ハイライト、重要度（1-5）、有用性フラグ、判定理由。
-4.  **Slack通知**
-    *   LLMが「有用（True）」と判定した記事のみ、要約と「なぜ有用か」の理由を添えて通知。
-5.  **データ永続化**
-    *   SQLite（`data/collector.db`）に収集・処理済みの全データを保存し、重複投稿を防止。
-
-## 対象サイト一覧（計28サイト）
-*   **国内:** Zenn, Qiita, DevelopersIO, note, Hatena Developer Blog, Speaker Deck, Connpass
-*   **コミュニティ:** Reddit (r/LocalLLaMA, r/MachineLearning, r/Python), Hacker News, Stack Overflow Blog
-*   **技術ブログ/論文:** Hugging Face (Blog, Papers), arXiv (cs.AI), OpenAI Blog, Anthropic News, Google Research, Meta AI, Microsoft Research
-*   **メディア/プラットフォーム:** Towards Data Science, Medium, Substack, GitHub Trending, Papers with Code, Kaggle, Dev.to, LlamaIndex Blog
-
-## セットアップ
-
-### Docker環境（推奨）
-1.  `.env` ファイルに以下を設定：
-    *   `LLAMA_ENDPOINT`: LLMサーバーURL
-    *   `LLAMA_API_KEY`: APIキー
-    *   `SLACK_BOT_TOKEN`: Slackトークン
-    *   `SLACK_CHANNEL_ID`: 送信先ID
-2.  `docker compose up -d --build` で起動。
-3.  SearXNG（ポート8888）とCollector（ポート8080）が立ち上がります。
-4. 　` docker logs collector -f`でログ確認。
-
-### 実行
-*   `curl -X POST http://localhost:8080/trigger/fetch` を叩くことで、全サイトの巡回と処理が開始されます。
-*   **事前絞り込み (Fast Filter):** 
-    *   `curl -X POST "http://localhost:8080/trigger/fetch?fast_filter=true"` を実行すると、スクレイピング前にタイトルのみでLLMによる一次審査を行います。
-    *   これにより、明らかに不要な記事（入門記事など）を高速にスキップし、処理時間を大幅に短縮できます。
+1.  **インテリジェントな横断検索**
+    *   SearXNGを活用し、主要技術サイトを横断検索。
+    *   **期間フィルタ:** 14日以内の新着記事のみ。
+    *   **事前絞り込み (Fast Filter):** 本文取得前にタイトルだけでLLMが一次審査を行い、不要な記事を高速にスキップ。
+    *   **ゼロ件対策 (Fallback Expand):** 検索結果が少ない場合、5秒のバッファを挟んでから段階的に検索範囲を広げて再取得。
+2.  **究極の生存性・安全性ポリシー（完全体）**
+    *   **robots.txtの完全遵守:** スクレイピング前に `robots.txt` を取得・解析し、1日間キャッシュ。`Disallow` を避けるだけでなく、**`Crawl-delay` を秒単位で厳格に遵守**します。
+    *   **統合レート制御:** `Crawl-delay` と独自の設定値を比較し、**常に最も安全な（長い）待ち時間を自動採用**してスリープします。
+    *   **ドメイン別クールダウン（動的・高速スキップ）:** 
+        *   429 (Too Many Requests) 検知時：該当ドメインを **10分間** 停止。
+        *   接続エラー/DNSエラー検知時：該当ドメインを **1時間** 停止。
+        *   クールダウン中は処理キューから即座に除外され、無駄なループを発生させません。
+    *   **ドメイン分散処理 (Round-Robin):** 同一サイトへの連続アクセスを物理的に排除する並び替えアルゴリズム。
+    *   **User-Agentローテーション:** 連絡先付きボット名をランダムに使用。
+    *   **堅牢なエラー処理:** `robots.txt` が取得できない場合でも、安全のため強制的に5秒の遅延を付与して慎重にアクセスします。
+3.  **LLMによる超厳格な判定**
+    *   「基礎・入門・AIトレンド・一般的なニュース」をすべて排除。
+    *   「高度な設計・深い最適化・実装詳細」のみを許可（重要度4以上必須）。
+4.  **Slack通知 & 永続化**
+    *   有用な記事のみ、判定理由と共にSlack投稿。 SQLiteによる重複アクセス防止。
 
 ## 技術スタック
-*   **Language:** Python 3.11
 *   **Search Engine:** SearXNG (Self-hosted)
-*   **Scraper:** Scrapling (Playwright, curl-cffi)
-*   **LLM Integration:** OpenAI API compatible client (httpx)
-*   **Database:** SQLite3
-*   **Notification:** Slack SDK
+*   **Scraper:** Scrapling, BeautifulSoup, RobotParser
+*   **LLM Integration:** Llama API互換 (gpt-4o互換モード)
+*   **Stability:** Tenacity (Retry), Domain Round-Robin Scheduler, Classified Backoff

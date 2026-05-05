@@ -138,7 +138,43 @@ def get_article(url: str):
         conn.close()
 
 
-def get_unposted_processed(limit: int = 50):
+def is_recently_accessed(url: str, ttl: int = None) -> bool:
+    """Check if the URL was fetched within the last 'ttl' seconds."""
+    if ttl is None:
+        ttl = cfg.RECRAWL_TTL
+    conn = sqlite3.connect(cfg.DB_PATH)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "SELECT fetched_at FROM articles WHERE url = ?", (url,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return False
+
+        try:
+            fetched_at_str = row[0]
+            if not fetched_at_str:
+                return False
+
+            from dateutil.parser import parse as parse_date
+            fetched_at = parse_date(fetched_at_str)
+
+            if fetched_at.tzinfo is None:
+                from datetime import timezone
+                fetched_at = fetched_at.replace(tzinfo=timezone.utc)
+
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            return (now - fetched_at).total_seconds() < ttl
+        except Exception as e:
+            return False
+    finally:
+        conn.close()
+
+
+def get_unposted_processed(limit: int = 100):
+
     """Return list of (url, title, summary) for articles that are processed but not posted."""
     conn = sqlite3.connect(cfg.DB_PATH)
     cur = conn.cursor()

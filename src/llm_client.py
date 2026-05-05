@@ -87,7 +87,8 @@ class LLMClient:
             msg = data["choices"][0]["message"]
             content = msg.get("content") or ""
             logger.info(f"[LLM] Response received in {duration:.2f}s. Content length: {len(content)}")
-            logger.info(f"[LLM] Raw Content (first 200 chars): {content[:200].replace(chr(10), ' ')}...")
+            clean_content = content[:200].replace('\n', ' ')
+            logger.info(f"[LLM] Raw Content (first 200 chars): {clean_content}...")
             logger.debug(f"[LLM] Full Raw Content: {content}")
         except Exception as e:
             logger.error(f"[LLM] Failed to parse response data: {e}")

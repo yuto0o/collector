@@ -29,7 +29,7 @@ class Config:
     MAX_SLEEP: int = int(os.getenv("MAX_SLEEP", "15"))
     LLM_TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "120"))
 
-    # Target sites for Phase 2 expansion
+    # Target sites for Phase 2 expansion (Safe sites only)
     TARGET_SITES = [
         {"name": "Zenn", "domain": "zenn.dev", "keywords": ["Python", "LLM", "機械学習"]},
         {"name": "Qiita", "domain": "qiita.com", "keywords": ["Python", "LLM", "機械学習"]},
@@ -38,11 +38,6 @@ class Config:
         {"name": "Hatena Blog", "domain": "hatena.ne.jp", "keywords": ["Python", "LLM", "機械学習"]},
         {"name": "Speaker Deck", "domain": "speakerdeck.com", "keywords": ["Python", "LLM", "機械学習"]},
         {"name": "Connpass", "domain": "connpass.com", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "Reddit LocalLLaMA", "domain": "reddit.com/r/LocalLLaMA", "keywords": [""]},
-        {"name": "Reddit MachineLearning", "domain": "reddit.com/r/MachineLearning", "keywords": [""]},
-        {"name": "Reddit Python", "domain": "reddit.com/r/Python", "keywords": [""]},
-        {"name": "Hacker News", "domain": "news.ycombinator.com", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "Stack Overflow Blog", "domain": "stackoverflow.blog", "keywords": ["Python", "LLM", "Machine Learning"]},
         {"name": "Hugging Face Blog", "domain": "huggingface.co/blog", "keywords": ["Python", "LLM", "Machine Learning"]},
         {"name": "Hugging Face Papers", "domain": "huggingface.co/papers", "keywords": [""]},
         {"name": "arXiv AI", "domain": "arxiv.org/list/cs.AI", "keywords": [""]},
@@ -52,14 +47,28 @@ class Config:
         {"name": "Meta AI", "domain": "ai.meta.com/blog", "keywords": [""]},
         {"name": "Microsoft Research", "domain": "microsoft.com/en-us/research/blog", "keywords": [""]},
         {"name": "Towards Data Science", "domain": "towardsdatascience.com", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "Medium Programming", "domain": "medium.com/topic/programming", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "Substack Tech", "domain": "substack.com", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "GitHub Trending", "domain": "github.com/trending/python", "keywords": [""]},
-        {"name": "Papers with Code", "domain": "paperswithcode.com", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "Kaggle Discussions", "domain": "kaggle.com/discussions", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "Dev.to", "domain": "dev.to", "keywords": ["Python", "LLM", "Machine Learning"]},
         {"name": "LlamaIndex Blog", "domain": "llamaindex.ai/blog", "keywords": [""]},
     ]
+
+    # Safety: Domain-specific rate limits (min_sleep, max_sleep)
+    DOMAIN_RATE_LIMIT = {
+        "qiita.com": (5, 10),
+        "zenn.dev": (5, 10),
+        "others": (10, 15)
+    }
+
+    # User-Agents representing the bot (minor rotation)
+    USER_AGENTS = [
+        "TechCollectorBot/1.0 (contact: youxiangzhongcun955@gmail.com)",
+        "TechCollectorBot/1.1 (contact: youxiangzhongcun955@gmail.com)",
+        "TechCollectorBot/1.2 (contact: youxiangzhongcun955@gmail.com)"
+    ]
+
+    # Global timeout for all requests
+    GLOBAL_TIMEOUT = 10
+    
+    # Recrawl TTL in seconds (3 days)
+    RECRAWL_TTL = 86400 * 3
 
 
 cfg = Config()
