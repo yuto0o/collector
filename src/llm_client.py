@@ -14,11 +14,8 @@ class LLMClient:
         self.timeout = timeout or int(getattr(cfg, "LLM_TIMEOUT", 120))
         self.client = httpx.Client(timeout=self.timeout)
 
-    def call_llm(self, text: str, response_model: Optional[Type[Any]] = None, max_tokens: int = 10000, max_retries: int = 1) -> dict:
-        """Call the LLM and optionally validate/parse the JSON output.
-
-        Increased default max_tokens to 1024 to accommodate thinking processes.
-        """
+    def call_llm(self, text: str, response_model: Optional[Type[Any]] = None, max_tokens: int = 20480, max_retries: int = 1) -> dict:
+        """Call the LLM and optionally validate/parse the JSON output."""
         url = f"{self.endpoint}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -26,8 +23,16 @@ class LLMClient:
         
         system_msg = (
             "You are a concise summarization assistant. Respond in Japanese.\n"
-            "Produce a JSON object with keys: summary, highlights (list), importance (1-5).\n"
-            "If you include thinking process, put the final JSON inside a ```json code block at the end."
+            "Assess if the article is useful for a student who has been learning Python for 3 years.\n"
+            "Produce a JSON object with EXACTLY these keys:\n"
+            "{\n"
+            "  \"summary\": \"string\",\n"
+            "  \"highlights\": [\"string\", ...],\n"
+            "  \"importance\": 1-5,\n"
+            "  \"is_useful_for_python_student\": true/false,\n"
+            "  \"reason_for_usefulness\": \"string\"\n"
+            "}\n"
+            "Do not skip any keys. Put the JSON inside a ```json code block."
         )
         user_msg = "Article:\n```" + text + "```"
         

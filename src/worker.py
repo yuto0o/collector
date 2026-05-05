@@ -6,14 +6,28 @@ from .config import cfg, logger
 from .llm_client import summarize
 from .notify import post_summary
 from .scraper import scrape_zenn
-from .search import fetch_zenn_tag
+from .search import fetch_zenn_tag, fetch_from_searxng
 from .storage import ensure_db, get_pending, set_summary, upsert_article
+import time
 
 
 def run_fetch():
-    logger.info("Starting run_fetch")
-    fetch_zenn_tag("python", limit=20)
-    logger.info("Finished run_fetch")
+    logger.info("Starting run_fetch for all target sites")
+    for site in cfg.TARGET_SITES:
+        name = site["name"]
+        domain = site["domain"]
+        query = site["query"]
+        
+        logger.info(f"Fetching articles from {name} ({domain})")
+        if domain == "zenn.dev":
+            fetch_zenn_tag(query or "python", limit=20)
+        else:
+            fetch_from_searxng(domain, query, limit=10)
+        
+        # Add a small random sleep between sites to be polite
+        time.sleep(random.uniform(1, 3))
+    
+    logger.info("Finished run_fetch for all target sites")
 
 
 def process_article(row):
@@ -47,35 +61,34 @@ def process_article(row):
         summary = res.get("summary")
         meta = res
     else:
+        # ... (handling raw string fallback)
         raw = str(res or "").strip()
-        meta = {"raw": raw}
-        low = raw.lower()
-        reasoning_indicators = [
-            "thinking process",
-            "analyze user input",
-            "here's a thinking",
-            "here's a thinking process",
-            "draft summary",
-            "identify key information",
-            "analysis",
-            "reasoning",
-        ]
-        long_explanatory = raw.count("\n") > 5 or len(raw) > 400
-        if any(ind in low for ind in reasoning_indicators) or long_explanatory:
-            logger.info("LLM returned reasoning/long explanatory text instead of a concise summary.")
-            summary = ""
-        else:
-            summary = raw
+        meta = {"raw": raw, "summary": raw, "is_useful_for_python_student": True}
+        summary = raw
+
+    logger.info(f"LLM Result meta for {url}: is_useful={meta.get('is_useful_for_python_student')}, reason_len={len(meta.get('reason_for_usefulness', ''))}")
 
     if summary:
         logger.info(f"Setting summary for {url}")
         set_summary(url, summary, meta)
-        logger.info(f"Posting summary to Slack for {url}")
-        try:
-            post_summary(title, url, summary)
-            logger.info(f"Successfully posted summary for {url}")
-        except Exception as e:
-            logger.error(f"Failed to post summary for {url}: {e}")
+        
+        # Check usefulness
+        is_useful = meta.get("is_useful_for_python_student")
+        if is_useful is None:
+            is_useful = True
+        reason = meta.get("reason_for_usefulness", "")
+        
+        if is_useful:
+            logger.info(f"Posting summary to Slack for {url} (Reason: {reason})")
+            try:
+                # Append reason to summary for Slack post
+                display_summary = f"{summary}\n\n*有用性判定理由 (Python歴3年向け):*\n{reason}"
+                post_summary(title, url, display_summary)
+                logger.info(f"Successfully posted summary for {url}")
+            except Exception as e:
+                logger.error(f"Failed to post summary for {url}: {e}")
+        else:
+            logger.info(f"Article deemed not useful for Python student: {url}")
     else:
         logger.warning(f"No summary generated for {url}")
 
