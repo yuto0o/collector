@@ -83,8 +83,10 @@ def process_article(row, fast_filter=False):
             scraped = scrape_article(url)
             text = scraped.get("text", "")
             if not text:
-                logger.warning(f"[WORKER] No content extracted for {url}")
-                return True # Mark as processed anyway if empty (don't retry endlessly)
+                logger.warning(f"[WORKER] No content extracted for {url}. Marking as processed to avoid infinite loop.")
+                # Mark as processed with failure message
+                set_summary(url, "[Failed to extract content]", {"is_useful_for_python_student": False, "importance": 0})
+                return True # Now returns True to signal it's "done"
             
             new_title = scraped.get("title", title)
             upsert_article(

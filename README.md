@@ -88,8 +88,14 @@ docker logs collector -f
 ### データの保存先
 収集した記事や処理状況は `data/collector.db` (SQLite) に保存されます。
 
+### 実行の停止方法
+バックグラウンドで動いている収集プロセスを強制終了したい場合は、コンテナを再起動してください。
+```bash
+docker compose restart collector
+```
+
 ### 既知のURLを忘れる（再取得したい場合）
-一度処理したURLは3日間再取得しません。テスト等で再度取得したい場合は、DBをクリアしてください。
+...一度処理したURLは3日間再取得しません。テスト等で再度取得したい場合は、DBをクリアしてください。
 ```bash
 sqlite3 data/collector.db "DELETE FROM articles"
 ```

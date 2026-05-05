@@ -39,6 +39,9 @@ def is_allowed_by_robots(url: str) -> tuple[bool, float]:
     if domain in _robots_cache:
         rp, expire = _robots_cache[domain]
         if now < expire:
+            if rp is None:
+                # Use the default safety delay from the failure cache
+                return True, 5.0
             # Respect crawl delay if specified
             delay = rp.crawl_delay("*") or 0.0
             return rp.can_fetch("*", url), float(delay)
