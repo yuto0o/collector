@@ -16,7 +16,7 @@ def is_recent(published_struct, days=14):
     return now - dt < timedelta(days=days)
 
 
-def fetch_from_searxng(domain: str, query: str = "", limit: int = 10, time_range: str = "month"):
+def fetch_from_searxng(domain: str, query: str = "", limit: int = 10, time_range: str = ""):
     """Generic function to fetch articles from a specific domain using SearXNG."""
     if not cfg.SEARXNG_URL:
         logger.warning("SearXNG URL not configured, skipping search.")
@@ -30,8 +30,10 @@ def fetch_from_searxng(domain: str, query: str = "", limit: int = 10, time_range
             "q": full_query,
             "format": "json",
             "count": limit,
-            "time_range": time_range
         }
+        if time_range:
+            params["time_range"] = time_range
+            
         search_url = cfg.SEARXNG_URL.rstrip("/") + "/search"
         resp = requests.get(search_url, params=params, timeout=15)
         resp.raise_for_status()

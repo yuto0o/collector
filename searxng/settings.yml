@@ -6,12 +6,18 @@ server:
 search:
   safe_search: 0
   autocomplete: ""
-formats:
-  - html
-  - json
-search:
   formats:
+    - html
     - json
+external_requests:
+  proxies:
+    http:
+    https:
+  verify: true
 enabled_engines:
   - google
   - bing
+  - duckduckgo
+  - brave
+  - wikipedia
+  - wikidata

@@ -41,6 +41,9 @@
 
 ### 実行
 *   `curl -X POST http://localhost:8080/trigger/fetch` を叩くことで、全サイトの巡回と処理が開始されます。
+*   **事前絞り込み (Fast Filter):** 
+    *   `curl -X POST "http://localhost:8080/trigger/fetch?fast_filter=true"` を実行すると、スクレイピング前にタイトルのみでLLMによる一次審査を行います。
+    *   これにより、明らかに不要な記事（入門記事など）を高速にスキップし、処理時間を大幅に短縮できます。
 
 ## 技術スタック
 *   **Language:** Python 3.11

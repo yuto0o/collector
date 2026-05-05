@@ -183,9 +183,58 @@ class LLMClient:
         """Backwards-compatible helper used by tests and callers expecting `summarize`."""
         return self.call_llm(text, **kwargs)
 
+    def evaluate_title_fast(self, title: str) -> bool:
+        """Fast filter to judge if article might be useful based on title only."""
+        url = f"{self.endpoint}/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        
+        system_msg = (
+            "You are a highly selective technical assistant. Respond ONLY with a JSON object.\n"
+            "Assess if the following article title is LIKELY useful for an advanced student who has mastered Python basics and has been learning/using it for 3 years.\n"
+            "STRICT CRITERIA:\n"
+            "- IGNORE basic tutorials, introductory guides, and common library updates.\n"
+            "- IGNORE general AI hype or surface-level news.\n"
+            "- ONLY ACCEPT: Advanced architectural patterns, deep performance optimizations, cutting-edge LLM/ML implementation details, or significant industry shifts.\n"
+            "Produce a JSON object with EXACTLY this key:\n"
+            "{\n"
+            "  \"is_useful\": true/false\n"
+            "}\n"
+            "Do not output anything else."
+        )
+        user_msg = f"Title: {title}"
+        
+        logger.info(f"[LLM] Title evaluation starting: {title}")
+        start_time = time.time()
+        try:
+            payload = {
+                "model": "gpt-4o",
+                "messages": [
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg},
+                ],
+                "max_tokens": 128,
+            }
+            resp = self.client.post(url, headers=headers, json=payload, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"].get("content") or ""
+            logger.info(f"[LLM] Title evaluation response ({time.time() - start_time:.2f}s): {content}")
+            json_match = re.search(r"\{.*?\}", content, re.DOTALL)
+            if json_match:
+                parsed = json.loads(json_match.group(0))
+                return parsed.get("is_useful", False)
+            return True # Fallback
+        except Exception as e:
+            logger.warning(f"[LLM] evaluate_title_fast failed for '{title}': {e}")
+            return True
 
 _default = LLMClient()
 
+
+def evaluate_title(title: str) -> bool:
+    return _default.evaluate_title_fast(title)
 
 def summarize(text: str) -> dict:
     # convenience wrapper using SummaryModel if available

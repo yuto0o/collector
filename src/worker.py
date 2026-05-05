@@ -3,7 +3,7 @@ import random
 from concurrent.futures import ThreadPoolExecutor
 
 from .config import cfg, logger
-from .llm_client import summarize
+from .llm_client import summarize, evaluate_title
 from .notify import post_summary
 from .scraper import scrape_article
 from .search import fetch_zenn_tag, fetch_from_searxng
@@ -32,13 +32,21 @@ def run_fetch():
     logger.info(f"[WORKER] Finished run_fetch in {total_duration:.2f}s")
 
 
-def process_article(row):
+def process_article(row, fast_filter=False):
     url, title, site, raw_text = row
     logger.info(f"[WORKER] Processing article: {url}")
     proc_start = time.time()
     
     if not raw_text:
-        logger.info(f"[WORKER] Article text is empty, scraping {url}")
+        # If fast filter is enabled, check title before scraping
+        if fast_filter:
+            logger.info(f"[WORKER] Fast filter enabled. Evaluating title: {title}")
+            if not evaluate_title(title):
+                logger.info(f"[WORKER] Fast filter skipped article: {url} (Title: {title})")
+                # Mark as processed with a skip meta
+                set_summary(url, "[Skipped by fast filter]", {"is_useful_for_python_student": False, "importance": 1})
+                return
+
         scraped = scrape_article(url)
         text = scraped.get("text", "")
         if not text:
@@ -101,8 +109,8 @@ def process_article(row):
     logger.info(f"[WORKER] Article processing finished in {proc_duration:.2f}s")
 
 
-def main_loop():
-    logger.info("[WORKER] Starting main loop")
+def main_loop(fast_filter=False):
+    logger.info(f"[WORKER] Starting main loop (fast_filter={fast_filter})")
     ensure_db()
     
     # initial fetch
@@ -118,7 +126,7 @@ def main_loop():
         logger.info(f"[WORKER] Found {len(pending)} pending articles to process (Total processed so far: {processed_count})")
         for row in pending:
             try:
-                process_article(row)
+                process_article(row, fast_filter=fast_filter)
                 processed_count += 1
             except Exception as e:
                 logger.exception(f"[WORKER] Error processing article {row[0]}: {e}")
