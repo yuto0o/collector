@@ -37,6 +37,7 @@
     *   `SLACK_CHANNEL_ID`: 送信先ID
 2.  `docker compose up -d --build` で起動。
 3.  SearXNG（ポート8888）とCollector（ポート8080）が立ち上がります。
+4. 　` docker logs collector -f`でログ確認。
 
 ### 実行
 *   `curl -X POST http://localhost:8080/trigger/fetch` を叩くことで、全サイトの巡回と処理が開始されます。

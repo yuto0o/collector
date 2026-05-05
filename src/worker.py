@@ -5,38 +5,41 @@ from concurrent.futures import ThreadPoolExecutor
 from .config import cfg, logger
 from .llm_client import summarize
 from .notify import post_summary
-from .scraper import scrape_zenn
+from .scraper import scrape_article
 from .search import fetch_zenn_tag, fetch_from_searxng
 from .storage import ensure_db, get_pending, set_summary, upsert_article
 import time
 
 
 def run_fetch():
-    logger.info("Starting run_fetch for all target sites")
+    logger.info("[WORKER] Starting run_fetch for all target sites with keywords")
+    total_start = time.time()
     for site in cfg.TARGET_SITES:
         name = site["name"]
         domain = site["domain"]
-        query = site["query"]
+        keywords = site.get("keywords") or [""]
         
-        logger.info(f"Fetching articles from {name} ({domain})")
-        if domain == "zenn.dev":
-            fetch_zenn_tag(query or "python", limit=20)
-        else:
-            fetch_from_searxng(domain, query, limit=10)
-        
-        # Add a small random sleep between sites to be polite
-        time.sleep(random.uniform(1, 3))
+        for kw in keywords:
+            logger.info(f"[WORKER] Fetching: {name} ({domain}) | keyword='{kw}'")
+            if domain == "zenn.dev":
+                fetch_zenn_tag(kw or "python", limit=20)
+            else:
+                fetch_from_searxng(domain, kw, limit=10)
+            
+            time.sleep(random.uniform(1, 2))
     
-    logger.info("Finished run_fetch for all target sites")
+    total_duration = time.time() - total_start
+    logger.info(f"[WORKER] Finished run_fetch in {total_duration:.2f}s")
 
 
 def process_article(row):
     url, title, site, raw_text = row
-    logger.info(f"Processing article: {url} (title: {title})")
+    logger.info(f"[WORKER] Processing article: {url}")
+    proc_start = time.time()
     
     if not raw_text:
-        logger.info(f"Article text is empty, scraping {url}")
-        scraped = scrape_zenn(url)
+        logger.info(f"[WORKER] Article text is empty, scraping {url}")
+        scraped = scrape_article(url)
         text = scraped.get("text", "")
         if not text:
             logger.warning(f"Failed to scrape text for {url}")
@@ -66,49 +69,59 @@ def process_article(row):
         meta = {"raw": raw, "summary": raw, "is_useful_for_python_student": True}
         summary = raw
 
-    logger.info(f"LLM Result meta for {url}: is_useful={meta.get('is_useful_for_python_student')}, reason_len={len(meta.get('reason_for_usefulness', ''))}")
-
     if summary:
         logger.info(f"Setting summary for {url}")
         set_summary(url, summary, meta)
         
         # Check usefulness
         is_useful = meta.get("is_useful_for_python_student")
+        importance = meta.get("importance", 0)
+        
         if is_useful is None:
             is_useful = True
-        reason = meta.get("reason_for_usefulness", "")
         
-        if is_useful:
-            logger.info(f"Posting summary to Slack for {url} (Reason: {reason})")
+        # Double strict check: must be useful AND importance >= 4
+        if is_useful and importance >= 4:
+            reason = meta.get("reason_for_usefulness", "")
+            logger.info(f"[WORKER] Posting summary to Slack for {url} (Importance: {importance})")
+
             try:
                 # Append reason to summary for Slack post
-                display_summary = f"{summary}\n\n*有用性判定理由 (Python歴3年向け):*\n{reason}"
+                display_summary = f"{summary}\n\n*重要度:* {importance}/5\n*有用性判定理由 (Python歴3年向け):*\n{reason}"
                 post_summary(title, url, display_summary)
-                logger.info(f"Successfully posted summary for {url}")
+                logger.info(f"[WORKER] Successfully posted summary for {url}")
             except Exception as e:
                 logger.error(f"Failed to post summary for {url}: {e}")
         else:
-            logger.info(f"Article deemed not useful for Python student: {url}")
+            logger.info(f"Article skipped (Not useful enough or low importance): {url} (Useful={is_useful}, Importance={importance})")
     else:
         logger.warning(f"No summary generated for {url}")
 
+    proc_duration = time.time() - proc_start
+    logger.info(f"[WORKER] Article processing finished in {proc_duration:.2f}s")
+
 
 def main_loop():
-    logger.info("Starting main loop")
+    logger.info("[WORKER] Starting main loop")
     ensure_db()
     
     # initial fetch
     run_fetch()
     
-    # process pending
-    pending = get_pending(limit=50)
-    logger.info(f"Found {len(pending)} pending articles to process")
-    
-    for row in pending:
-        try:
-            process_article(row)
-        except Exception as e:
-            logger.exception(f"Error processing article {row[0]}: {e}")
+    # process pending until none left
+    processed_count = 0
+    while True:
+        pending = get_pending(limit=50)
+        if not pending:
+            break
+            
+        logger.info(f"[WORKER] Found {len(pending)} pending articles to process (Total processed so far: {processed_count})")
+        for row in pending:
+            try:
+                process_article(row)
+                processed_count += 1
+            except Exception as e:
+                logger.exception(f"[WORKER] Error processing article {row[0]}: {e}")
             
     # resend any processed articles that were not posted due to earlier failures
     try:
@@ -116,19 +129,19 @@ def main_loop():
 
         unposted = get_unposted_processed(limit=100)
         if unposted:
-            logger.info(f"Found {len(unposted)} unposted processed articles")
+            logger.info(f"[WORKER] Found {len(unposted)} unposted processed articles")
             for url, title, summary in unposted:
                 try:
-                    logger.info(f"Retrying Slack post for {url}")
+                    logger.info(f"[WORKER] Retrying Slack post for {url}")
                     post_summary(title, url, summary)
-                    logger.info(f"Successfully posted summary for {url} on retry")
+                    logger.info(f"[WORKER] Successfully posted summary for {url} on retry")
                 except Exception as e:
-                    logger.error(f"Failed retry post for {url}: {e}")
+                    logger.error(f"[WORKER] Failed retry post for {url}: {e}")
                     continue
     except Exception as e:
-        logger.error(f"Error in unposted processing: {e}")
+        logger.error(f"[WORKER] Error in unposted processing: {e}")
     
-    logger.info("Main loop execution finished")
+    logger.info(f"[WORKER] Main loop execution finished. Total processed: {processed_count}")
 
 
 if __name__ == "__main__":

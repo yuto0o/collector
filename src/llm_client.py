@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from typing import Optional, Any, Type
 
 import httpx
@@ -22,8 +23,15 @@ class LLMClient:
             headers["Authorization"] = f"Bearer {self.api_key}"
         
         system_msg = (
-            "You are a concise summarization assistant. Respond in Japanese.\n"
-            "Assess if the article is useful for a student who has been learning Python for 3 years.\n"
+            "You are a highly selective technical summarization assistant. Respond in Japanese.\n"
+            "Assess if the article is TRULY useful for an advanced student who has mastered Python basics and has been learning/using it for 3 years.\n"
+            "STRICT CRITERIA:\n"
+            "- IGNORE basic tutorials, introductory guides, and common library updates.\n"
+            "- IGNORE general AI hype or surface-level news.\n"
+            "- ONLY ACCEPT: Advanced architectural patterns, deep performance optimizations, cutting-edge LLM/ML implementation details, or significant industry shifts that require seasoned expertise to appreciate.\n"
+            "- A 'useful' article must have technical depth or high practical value for an experienced developer.\n"
+            "- IF IMPORTANCE IS LESS THAN 4, is_useful_for_python_student MUST BE false.\n"
+            "\n"
             "Produce a JSON object with EXACTLY these keys:\n"
             "{\n"
             "  \"summary\": \"string\",\n"
@@ -39,7 +47,14 @@ class LLMClient:
         max_input_chars = 4000
         if len(text) > max_input_chars:
             text = text[:max_input_chars]
+            user_msg = "Article (Truncated):\n```" + text + "```"
 
+        logger.info(f"[LLM] Request starting. Text length: {len(text)} chars.")
+        logger.debug(f"[LLM] System Prompt: {system_msg}")
+        logger.debug(f"[LLM] User Prompt: {user_msg}")
+
+        
+        start_time = time.time()
         attempt = 0
         last_err = None
         while attempt <= max_retries:
@@ -60,19 +75,22 @@ class LLMClient:
             except Exception as e:
                 last_err = e
                 attempt += 1
+                logger.warning(f"[LLM] Attempt {attempt} failed: {e}")
                 continue
         
+        duration = time.time() - start_time
         if last_err:
+            logger.error(f"[LLM] Failed after {duration:.2f}s: {last_err}")
             return {"summary": "", "error": str(last_err)}
 
         try:
             msg = data["choices"][0]["message"]
             content = msg.get("content") or ""
-            # Log the raw response for debugging (truncated for log visibility)
-            logger.info(f"Raw LLM Response (first 200 chars): {content[:200]}...")
-            if len(content) > 200:
-                logger.debug(f"Full Raw Response: {content}")
-        except Exception:
+            logger.info(f"[LLM] Response received in {duration:.2f}s. Content length: {len(content)}")
+            logger.info(f"[LLM] Raw Content (first 200 chars): {content[:200].replace(chr(10), ' ')}...")
+            logger.debug(f"[LLM] Full Raw Content: {content}")
+        except Exception as e:
+            logger.error(f"[LLM] Failed to parse response data: {e}")
             content = json.dumps(data)
 
         def _extract_json_from_text(text: str):

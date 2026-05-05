@@ -19,10 +19,12 @@ def is_recent(published_struct, days=14):
 def fetch_from_searxng(domain: str, query: str = "", limit: int = 10, time_range: str = "month"):
     """Generic function to fetch articles from a specific domain using SearXNG."""
     if not cfg.SEARXNG_URL:
+        logger.warning("SearXNG URL not configured, skipping search.")
         return 0
 
     full_query = f"site:{domain} {query}".strip()
-    logger.info(f"Trying SearXNG for {domain} with query '{query}'")
+    logger.info(f"[SEARCH] Starting SearXNG: query='{full_query}', domain={domain}")
+    start_time = time.time()
     try:
         params = {
             "q": full_query,
@@ -31,11 +33,12 @@ def fetch_from_searxng(domain: str, query: str = "", limit: int = 10, time_range
             "time_range": time_range
         }
         search_url = cfg.SEARXNG_URL.rstrip("/") + "/search"
-        resp = requests.get(search_url, params=params, timeout=10)
+        resp = requests.get(search_url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
         results = data.get("results") or []
-        logger.info(f"SearXNG returned {len(results)} results for {domain}")
+        duration = time.time() - start_time
+        logger.info(f"[SEARCH] SearXNG finished in {duration:.2f}s. Found {len(results)} raw results for {domain}")
         
         count = 0
         for r in results:
@@ -49,10 +52,12 @@ def fetch_from_searxng(domain: str, query: str = "", limit: int = 10, time_range
                 upsert_article(url=url, title=title, site=domain, raw_text="")
                 count += 1
             except Exception as e:
-                logger.error(f"Failed to upsert article {url}: {e}")
+                logger.error(f"[SEARCH] Failed to upsert article {url}: {e}")
+        logger.info(f"[SEARCH] Successfully stored {count} articles for {domain}")
         return count
     except Exception as e:
-        logger.warning(f"SearXNG failed for {domain}: {e}")
+        duration = time.time() - start_time
+        logger.warning(f"[SEARCH] SearXNG failed for {domain} after {duration:.2f}s: {e}")
         return 0
 
 
@@ -61,35 +66,35 @@ def fetch_zenn_tag(tag: str = "python", limit: int = 20):
 
     Try SearXNG first, then fall back to Zenn's RSS feed.
     """
-    logger.info(f"Fetching Zenn articles for tag: {tag}")
+    logger.info(f"[SEARCH] Fetching Zenn articles for tag: {tag}")
     
     count = fetch_from_searxng("zenn.dev", tag, limit)
     if count > 0:
-        logger.info(f"Successfully fetched {count} articles from SearXNG for Zenn")
         return
 
     # Zenn provides tag RSS e.g. https://zenn.dev/topics/python/feed
-    logger.info("Falling back to Zenn RSS feed")
+    logger.info("[SEARCH] Falling back to Zenn RSS feed")
+    start_time = time.time()
     feed_url = f"https://zenn.dev/topics/{tag}/feed"
     try:
         d = feedparser.parse(feed_url)
-        logger.info(f"RSS feed returned {len(d.entries)} entries")
+        duration = time.time() - start_time
+        logger.info(f"[SEARCH] RSS feed fetched in {duration:.2f}s. Entries: {len(d.entries)}")
         added_count = 0
         for entry in d.entries:
             if added_count >= limit:
                 break
             
-            # Date filtering: 14 days
             if not is_recent(entry.get("published_parsed")):
                 continue
 
             url = entry.link
             title = entry.title
             try:
-                upsert_article(url=url, title=title, site="zenn", raw_text="")
+                upsert_article(url=url, title=title, site="zenn.dev", raw_text="")
                 added_count += 1
             except Exception as e:
-                logger.error(f"Failed to upsert article from RSS {url}: {e}")
-        logger.info(f"Added {added_count} recent articles from RSS")
+                logger.error(f"[SEARCH] Failed to upsert RSS article {url}: {e}")
+        logger.info(f"[SEARCH] Added {added_count} recent articles from RSS")
     except Exception as e:
-        logger.error(f"RSS feed failed: {e}")
+        logger.error(f"[SEARCH] RSS feed failed: {e}")
