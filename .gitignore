@@ -17,4 +17,6 @@ wheels/
 memo/
 
 # data
-data/collector.db
+data/*
+!data/.gitkeep
+
