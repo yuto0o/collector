@@ -17,4 +17,4 @@ wheels/
 memo/
 
 # data
-data/
+data/collector.db

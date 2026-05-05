@@ -60,7 +60,7 @@ class LLMClient:
         while attempt <= max_retries:
             try:
                 payload = {
-                    "model": "gpt-4o",
+                    "model": cfg.LLAMA_MODEL,
                     "messages": [
                         {"role": "system", "content": system_msg},
                         {"role": "user", "content": user_msg},
@@ -210,7 +210,7 @@ class LLMClient:
         start_time = time.time()
         try:
             payload = {
-                "model": "gpt-4o",
+                "model": cfg.LLAMA_MODEL,
                 "messages": [
                     {"role": "system", "content": system_msg},
                     {"role": "user", "content": user_msg},

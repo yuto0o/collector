@@ -19,6 +19,7 @@ logger = logging.getLogger("collector")
 class Config:
     LLAMA_ENDPOINT: str = os.getenv("LLAMA_ENDPOINT", "http://localhost:8080")
     LLAMA_API_KEY: str = os.getenv("LLAMA_API_KEY", "")
+    LLAMA_MODEL: str = os.getenv("LLAMA_MODEL", "local-model")
     SLACK_BOT_TOKEN: str = os.getenv("SLACK_BOT_TOKEN", "")
     SLACK_CHANNEL_ID: str = os.getenv("SLACK_CHANNEL_ID", "")
     DB_PATH: str = os.getenv("DB_PATH", "./data/collector.db")
