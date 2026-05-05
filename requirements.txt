@@ -15,3 +15,7 @@ pytest
 pytest-asyncio
 feedparser
 bs4
+scrapling
+curl_cffi
+playwright
+browserforge

@@ -4,7 +4,7 @@ from typing import Optional, Any, Type
 
 import httpx
 
-from .config import cfg
+from .config import cfg, logger
 
 
 class LLMClient:
@@ -14,34 +14,26 @@ class LLMClient:
         self.timeout = timeout or int(getattr(cfg, "LLM_TIMEOUT", 120))
         self.client = httpx.Client(timeout=self.timeout)
 
-    def call_llm(self, text: str, response_model: Optional[Type[Any]] = None, max_tokens: int = 256, max_retries: int = 1) -> dict:
-        """Call the LLM and optionally validate/parse the JSON output with a Pydantic model.
+    def call_llm(self, text: str, response_model: Optional[Type[Any]] = None, max_tokens: int = 10000, max_retries: int = 1) -> dict:
+        """Call the LLM and optionally validate/parse the JSON output.
 
-        If `response_model` (a Pydantic BaseModel class) is provided, the parsed JSON
-        will be validated and returned as the model instance (or its dict).
+        Increased default max_tokens to 1024 to accommodate thinking processes.
         """
         url = f"{self.endpoint}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        # Stronger prompt: system + user messages, request strict JSON and Japanese output
+        
         system_msg = (
-            "You are a concise summarization assistant. Respond only with valid JSON that exactly matches the schema:\n"
-            "{\n  \"summary\": \"string\",\n  \"highlights\": [\"string\", ...],\n  \"importance\": \"integer (1-5)\"\n}\n"
-            "Do not include any explanation, commentary, or extra text outside the JSON. Summarize the article in Japanese."
+            "You are a concise summarization assistant. Respond in Japanese.\n"
+            "Produce a JSON object with keys: summary, highlights (list), importance (1-5).\n"
+            "If you include thinking process, put the final JSON inside a ```json code block at the end."
         )
         user_msg = "Article:\n```" + text + "```"
-        # Prevent sending extremely long payloads which may be rejected by
-        # some LLM endpoints. Truncate to a reasonable size.
+        
         max_input_chars = 4000
         if len(text) > max_input_chars:
             text = text[:max_input_chars]
-            prompt = (
-                "You are a summarization assistant. Given the article text delimited by triple backticks, "
-                "produce a JSON object with keys: summary (3 lines max), highlights (list of 3 bullets), importance (1-5 integer).\n"
-                "If the article was truncated, indicate that in the summary.\n"
-                "Return only valid JSON.\n\nArticle:\n```" + text + "```"
-            )
 
         attempt = 0
         last_err = None
@@ -64,19 +56,17 @@ class LLMClient:
                 last_err = e
                 attempt += 1
                 continue
+        
         if last_err:
-            try:
-                err_text = getattr(last_err, "response", None) and last_err.response.text or str(last_err)
-            except Exception:
-                err_text = str(last_err)
-            return {"summary": "", "error": str(last_err), "error_text": err_text}
+            return {"summary": "", "error": str(last_err)}
 
-        # Expect OpenAI-like response
         try:
             msg = data["choices"][0]["message"]
-            # Prefer explicit assistant content, but some models place the useful
-            # text in other fields like `reasoning_content`.
-            content = msg.get("content") or msg.get("reasoning_content") or ""
+            content = msg.get("content") or ""
+            # Log the raw response for debugging (truncated for log visibility)
+            logger.info(f"Raw LLM Response (first 200 chars): {content[:200]}...")
+            if len(content) > 200:
+                logger.debug(f"Full Raw Response: {content}")
         except Exception:
             content = json.dumps(data)
 
@@ -84,19 +74,21 @@ class LLMClient:
             if not text:
                 return None
             text = text.strip()
-            # If entire text is JSON, try parse directly
-            try:
-                return json.loads(text)
-            except Exception:
-                pass
+            
+            # 1. Try to find content within ```json ... ``` blocks
+            json_match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
+            if json_match:
+                try:
+                    return json.loads(json_match.group(1))
+                except Exception:
+                    pass
 
-            # Common pattern: model returns explanation then a JSON block. Try to
-            # find the first JSON object or array in the text.
-            # This is a best-effort heuristic.
-                # Try to find a balanced JSON object by scanning forward from each
-                # opening brace. This handles nested braces correctly.
-                for m in re.finditer(r"\{", text):
-                    start = m.start()
+            # 2. Try to find the last occurrence of { ... }
+            # Models often put the summary at the very end.
+            try:
+                # Find all potential JSON objects
+                starts = [m.start() for m in re.finditer(r"\{", text)]
+                for start in reversed(starts):
                     depth = 0
                     for i in range(start, len(text)):
                         if text[i] == "{":
@@ -109,22 +101,14 @@ class LLMClient:
                                     return json.loads(candidate)
                                 except Exception:
                                     break
+            except Exception:
+                pass
 
-                # Try array similarly
-                for m in re.finditer(r"\[", text):
-                    start = m.start()
-                    depth = 0
-                    for i in range(start, len(text)):
-                        if text[i] == "[":
-                            depth += 1
-                        elif text[i] == "]":
-                            depth -= 1
-                            if depth == 0:
-                                candidate = text[start : i + 1]
-                                try:
-                                    return json.loads(candidate)
-                                except Exception:
-                                    break
+            # 3. Fallback to direct parse
+            try:
+                return json.loads(text)
+            except Exception:
+                pass
 
             return None
 
