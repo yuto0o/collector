@@ -16,15 +16,20 @@
 プロジェクトのルートディレクトリに `.env` ファイルを作成（env.exampleをコピー）し、以下の内容を設定してください。
 ```env
 # LLM設定 (Llama API互換サーバー)
-LLAMA_ENDPOINT=""  # LLMのURL
+LLAMA_ENDPOINT="http://100.108.194.117:8081/"  # LLMのURL
 LLAMA_API_KEY="your_api_key"                  # APIキー（あれば）
+LLAMA_MODEL="qwen3.6"                          # 使用するモデル名
 
 # Slack設定
 SLACK_BOT_TOKEN="xoxb-..."                    # Slack Bot Token
 SLACK_CHANNEL_ID="C0..."                      # 投稿先のチャンネルID
 
+# ボット設定
+BOT_EMAIL="your_email@example.com"             # クローラーの身元用連絡先
+
 # システム設定
 DB_PATH=./data/collector.db                   # SQLiteデータベースの保存先
+
 ```
 
 ### 3. サービスの起動

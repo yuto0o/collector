@@ -58,18 +58,23 @@ class Config:
         "others": (10, 15)
     }
 
-    # User-Agents representing the bot (minor rotation)
-    USER_AGENTS = [
-        "TechCollectorBot/1.0 (contact: youxiangzhongcun955@gmail.com)",
-        "TechCollectorBot/1.1 (contact: youxiangzhongcun955@gmail.com)",
-        "TechCollectorBot/1.2 (contact: youxiangzhongcun955@gmail.com)"
-    ]
-
     # Global timeout for all requests
     GLOBAL_TIMEOUT = 10
     
     # Recrawl TTL in seconds (3 days)
     RECRAWL_TTL = 86400 * 3
+
+    # Bot contact email
+    BOT_EMAIL: str = os.getenv("BOT_EMAIL", "your_email@example.com")
+
+    @property
+    def USER_AGENTS(self):
+        """Construct User-Agents dynamically from BOT_EMAIL."""
+        return [
+            f"TechCollectorBot/1.0 (contact: {self.BOT_EMAIL})",
+            f"TechCollectorBot/1.1 (contact: {self.BOT_EMAIL})",
+            f"TechCollectorBot/1.2 (contact: {self.BOT_EMAIL})"
+        ]
 
 
 cfg = Config()
