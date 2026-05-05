@@ -6,7 +6,7 @@ from .config import cfg, logger
 from .llm_client import summarize, evaluate_title
 from .notify import post_summary
 from .scraper import scrape_article, TooManyRequestsError, DomainConnectionError
-from .search import fetch_zenn_tag, fetch_from_searxng
+from .search import fetch_zenn_tag, fetch_from_searxng, fetch_from_index_page
 from .storage import ensure_db, get_pending, set_summary, upsert_article
 import time
 from urllib.parse import urlparse
@@ -18,7 +18,7 @@ domain_cooldowns = {}
 
 
 def run_fetch():
-    logger.info("[WORKER] Starting run_fetch for all target sites with keywords (Limit: 3)")
+    logger.info("[WORKER] Starting run_fetch (Prioritizing Direct Index Pages)")
     total_start = time.time()
     
     # Shuffle target sites to randomize search order
@@ -29,26 +29,36 @@ def run_fetch():
         name = site["name"]
         domain = site["domain"]
         keywords = site.get("keywords") or [""]
+        index_urls = site.get("index_urls") or []
         
-        # Check if domain is in cooldown before searching
+        # Check if domain is in cooldown
         if time.time() < domain_cooldowns.get(domain, 0):
-            logger.info(f"[WORKER] Skipping search for {domain} due to active cooldown.")
+            logger.info(f"[WORKER] Skipping {domain} due to active cooldown.")
             continue
 
+        # 1. Try direct index pages if available (HTML scraping)
+        if index_urls:
+            for idx in index_urls:
+                logger.info(f"[WORKER] Scraping index: {name} -> {idx}")
+                fetch_from_index_page(idx, domain, limit=5)
+                time.sleep(random.uniform(5, 10))
+
+        # 2. Try keywords (SearXNG search)
         for kw in keywords:
-            logger.info(f"[WORKER] Fetching: {name} ({domain}) | keyword='{kw}'")
+            # Skip empty keyword if we already scraped indices to save search load
+            if not kw and index_urls:
+                continue
+            
+            logger.info(f"[WORKER] Searching SearXNG: {name} ({domain}) | keyword='{kw}'")
             if domain == "zenn.dev":
                 fetch_zenn_tag(kw or "python", limit=3)
             else:
                 fetch_from_searxng(domain, kw, limit=3)
             
-            # Domain-specific sleep to avoid concentration
             sleep_range = cfg.DOMAIN_RATE_LIMIT.get(domain, cfg.DOMAIN_RATE_LIMIT["others"])
             s = random.uniform(*sleep_range)
-            logger.debug(f"[WORKER] Sleeping for {s:.2f}s for domain {domain}")
             time.sleep(s)
             
-        # Extra buffer between domains in search phase
         logger.info(f"[WORKER] Buffer sleep (10s) between domains for search safety")
         time.sleep(10)
     

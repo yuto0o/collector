@@ -19,4 +19,5 @@ memo/
 # data
 data/*
 !data/.gitkeep
+!data/get_db.py
 

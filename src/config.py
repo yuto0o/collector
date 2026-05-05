@@ -30,25 +30,113 @@ class Config:
     MAX_SLEEP: int = int(os.getenv("MAX_SLEEP", "15"))
     LLM_TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "120"))
 
-    # Target sites for Phase 2 expansion (Safe sites only)
+    # Target sites (Simplified domains for better search hits)
     TARGET_SITES = [
-        {"name": "Zenn", "domain": "zenn.dev", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "Qiita", "domain": "qiita.com", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "DevelopersIO", "domain": "dev.classmethod.jp", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "note", "domain": "note.com", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "Hatena Blog", "domain": "hatena.ne.jp", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "Speaker Deck", "domain": "speakerdeck.com", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "Connpass", "domain": "connpass.com", "keywords": ["Python", "LLM", "機械学習"]},
-        {"name": "Hugging Face Blog", "domain": "huggingface.co/blog", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "Hugging Face Papers", "domain": "huggingface.co/papers", "keywords": [""]},
-        {"name": "arXiv AI", "domain": "arxiv.org/list/cs.AI", "keywords": [""]},
-        {"name": "OpenAI Blog", "domain": "openai.com/news", "keywords": [""]},
-        {"name": "Anthropic News", "domain": "anthropic.com/news", "keywords": [""]},
-        {"name": "Google Research", "domain": "research.google/blog", "keywords": [""]},
-        {"name": "Meta AI", "domain": "ai.meta.com/blog", "keywords": [""]},
-        {"name": "Microsoft Research", "domain": "microsoft.com/en-us/research/blog", "keywords": [""]},
-        {"name": "Towards Data Science", "domain": "towardsdatascience.com", "keywords": ["Python", "LLM", "Machine Learning"]},
-        {"name": "LlamaIndex Blog", "domain": "llamaindex.ai/blog", "keywords": [""]},
+        {
+            "name": "Zenn", 
+            "domain": "zenn.dev", 
+            "keywords": ["Python", "LLM", "機械学習"],
+            "index_urls": ["https://zenn.dev/topics/ai", "https://zenn.dev/topics/python"]
+        },
+        {
+            "name": "Qiita", 
+            "domain": "qiita.com", 
+            "keywords": ["Python", "LLM", "機械学習"],
+            "index_urls": ["https://qiita.com/tags/python", "https://qiita.com/tags/llm"]
+        },
+        {
+            "name": "DevelopersIO", 
+            "domain": "dev.classmethod.jp", 
+            "keywords": ["Python", "LLM", "機械学習"],
+            "index_urls": ["https://dev.classmethod.jp/"]
+        },
+        {
+            "name": "note", 
+            "domain": "note.com", 
+            "keywords": ["Python", "LLM", "機械学習"]
+        },
+        {
+            "name": "Hatena Blog", 
+            "domain": "hatena.ne.jp", 
+            "keywords": ["Python", "LLM", "機械学習"],
+            "index_urls": ["https://developer.hatenastaff.com/"]
+        },
+        {
+            "name": "Speaker Deck", 
+            "domain": "speakerdeck.com", 
+            "keywords": ["Python", "LLM", "機械学習"]
+        },
+        {
+            "name": "Connpass", 
+            "domain": "connpass.com", 
+            "keywords": ["Python", "LLM", "機械学習"]
+        },
+        {
+            "name": "Hugging Face", 
+            "domain": "huggingface.co", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://huggingface.co/blog", "https://huggingface.co/papers"]
+        },
+        {
+            "name": "arXiv", 
+            "domain": "arxiv.org", 
+            "keywords": ["Python LLM", "Machine Learning"],
+            "index_urls": ["https://arxiv.org/list/cs.AI/recent", "https://arxiv.org/list/cs.CL/recent"]
+        },
+        {
+            "name": "OpenAI", 
+            "domain": "openai.com", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://openai.com/news/", "https://openai.com/index/research/"]
+        },
+        {
+            "name": "Anthropic", 
+            "domain": "anthropic.com", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://www.anthropic.com/news"]
+        },
+        {
+            "name": "Google Research", 
+            "domain": "research.google", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://research.google/blog/"]
+        },
+        {
+            "name": "Meta AI", 
+            "domain": "ai.meta.com", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://ai.meta.com/blog/", "https://engineering.fb.com/"]
+        },
+        {
+            "name": "Microsoft Research", 
+            "domain": "microsoft.com", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://www.microsoft.com/en-us/research/blog/"]
+        },
+        {
+            "name": "Towards Data Science", 
+            "domain": "towardsdatascience.com", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://towardsdatascience.com/"]
+        },
+        {
+            "name": "LlamaIndex Blog", 
+            "domain": "llamaindex.ai", 
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://www.llamaindex.ai/blog"]
+        },
+        {
+            "name": "LangChain Blog",
+            "domain": "langchain.dev",
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://blog.langchain.dev/"]
+        },
+        {
+            "name": "Papers with Code",
+            "domain": "paperswithcode.com",
+            "keywords": ["Python", "LLM", "Machine Learning"],
+            "index_urls": ["https://paperswithcode.com/latest"]
+        }
     ]
 
     # Safety: Domain-specific rate limits (min_sleep, max_sleep)

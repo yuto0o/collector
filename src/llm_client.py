@@ -12,10 +12,10 @@ class LLMClient:
     def __init__(self, endpoint: str = None, api_key: str = None, timeout: Optional[int] = None):
         self.endpoint = endpoint or cfg.LLAMA_ENDPOINT
         self.api_key = api_key or cfg.LLAMA_API_KEY
-        self.timeout = timeout or int(getattr(cfg, "LLM_TIMEOUT", 120))
+        self.timeout = timeout or int(getattr(cfg, "LLM_TIMEOUT", 600))
         self.client = httpx.Client(timeout=self.timeout)
 
-    def call_llm(self, text: str, response_model: Optional[Type[Any]] = None, max_tokens: int = 20480, max_retries: int = 1) -> dict:
+    def call_llm(self, text: str, response_model: Optional[Type[Any]] = None, max_tokens: int = 131072, max_retries: int = 1) -> dict:
         """Call the LLM and optionally validate/parse the JSON output."""
         url = f"{self.endpoint}/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
@@ -44,7 +44,7 @@ class LLMClient:
         )
         user_msg = "Article:\n```" + text + "```"
         
-        max_input_chars = 4000
+        max_input_chars = 40000
         if len(text) > max_input_chars:
             text = text[:max_input_chars]
             user_msg = "Article (Truncated):\n```" + text + "```"
@@ -217,7 +217,7 @@ class LLMClient:
                 ],
                 "max_tokens": 128,
             }
-            resp = self.client.post(url, headers=headers, json=payload, timeout=10)
+            resp = self.client.post(url, headers=headers, json=payload, timeout=20)
             resp.raise_for_status()
             data = resp.json()
             content = data["choices"][0]["message"].get("content") or ""
