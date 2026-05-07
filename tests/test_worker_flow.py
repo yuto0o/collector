@@ -18,12 +18,11 @@ def test_full_flow_monkeypatch(monkeypatch, tmp_path):
     storage.upsert_article(url, title, site, raw_text)
 
     # Monkeypatch summarize to avoid calling external LLM
-    from src.llm_client import _default
-
+    import src.llm_client
     def fake_summarize(text):
-        return {"summary": "テスト要約: 短く。", "highlights": ["点1", "点2"]}
+        return {"summary": "テスト要約: 短く。", "highlights": ["点1", "点2"], "importance": 4, "is_useful_for_python_student": True}
 
-    monkeypatch.setattr(_default, "summarize", lambda text: fake_summarize(text))
+    monkeypatch.setattr(src.llm_client, "summarize", fake_summarize)
     # Ensure no actual Slack/network calls during test
     from src import notify
 

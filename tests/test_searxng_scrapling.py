@@ -56,16 +56,16 @@ def test_fetch_zenn_tag_uses_searxng(monkeypatch):
     assert items and items[0][0] == 'https://zenn.dev/foo'
 
 
-def test_scrape_zenn_uses_scrapling(monkeypatch):
-    # Return JSON response from Scrapling
-    def fake_post(endpoint, json=None, timeout=None):
-        assert 'extract' in endpoint or endpoint.endswith('/extract') or endpoint.endswith('8000')
-        return DummyResp(json_data={"title": "Sample", "text": "Hello world"})
+def test_scrape_article_uses_requests(monkeypatch):
+    # Mock requests.get to return HTML for scraper to parse
+    def fake_get(url, timeout=None, headers=None):
+        return DummyResp(text="<html><head><title>Sample</title></head><body><article><h1>Sample</h1><p>Hello world</p></article></body></html>")
 
     scraper = reload_scraper()
-    monkeypatch.setattr(config.cfg, 'SCRAPLING_URL', 'http://fake-scrap:8000')
-    monkeypatch.setattr('requests.post', fake_post)
+    monkeypatch.setattr('requests.get', fake_get)
+    # Mock robots.txt to always allow
+    monkeypatch.setattr(scraper, 'is_allowed_by_robots', lambda url: (True, 0.0))
 
-    res = scraper.scrape_zenn('https://example.com/article')
+    res = scraper.scrape_article('https://example.com/article')
     assert res['title'] == 'Sample'
     assert 'Hello world' in res['text']

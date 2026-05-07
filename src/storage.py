@@ -92,12 +92,33 @@ def mark_posted(url: str, ts: str = None, slack_ts: str = None):
     conn.close()
 
 
+def mark_failed_try(url: str):
+    conn = sqlite3.connect(cfg.DB_PATH)
+    cur = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    cur.execute(
+        "UPDATE articles SET try_count = try_count + 1, fetched_at = ? WHERE url = ?",
+        (now, url),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_pending(limit: int = 50):
     conn = sqlite3.connect(cfg.DB_PATH)
     cur = conn.cursor()
+    # Logic: 
+    # 1. processed = 0
+    # 2. AND (try_count = 0 OR fetched_at is older than RECRAWL_TTL)
+    # Using julianday for date arithmetic in SQLite
     cur.execute(
-        "SELECT url, title, site, raw_text FROM articles WHERE processed=0 LIMIT ?",
-        (limit,),
+        """
+        SELECT url, title, site, raw_text FROM articles 
+        WHERE processed=0 
+          AND (try_count = 0 OR (julianday('now') - julianday(fetched_at)) * 86400 > ?)
+        LIMIT ?
+        """,
+        (cfg.RECRAWL_TTL, limit),
     )
     rows = cur.fetchall()
     conn.close()

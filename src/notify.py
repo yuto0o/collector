@@ -6,7 +6,7 @@ from . import storage
 client = WebClient(token=cfg.SLACK_BOT_TOKEN) if cfg.SLACK_BOT_TOKEN else None
 
 
-def post_summary(title: str, url: str, summary: str):
+def post_summary(title: str, url: str, summary: str, channel_id: str = None):
     # Deduplicate: avoid posting the same article twice
     try:
         if storage.is_already_posted(url):
@@ -16,8 +16,9 @@ def post_summary(title: str, url: str, summary: str):
         # If storage check fails, proceed to avoid data loss
         pass
 
+    target_channel = channel_id or cfg.SLACK_CHANNEL_ID
     if not client:
-        print("Slack token not configured; would post:", title, url, summary)
+        print(f"Slack token not configured; would post to {target_channel}:", title, url, summary)
         # Do not mark posted when posting is not attempted
         return
 
@@ -39,7 +40,7 @@ def post_summary(title: str, url: str, summary: str):
     # Japanese formatted message
     text = f"*{title}*\n{url}\n\n*要約*:\n{summary_to_post}"
     try:
-        res = client.chat_postMessage(channel=cfg.SLACK_CHANNEL_ID, text=text)
+        res = client.chat_postMessage(channel=target_channel, text=text)
     except Exception as e:
         # On post failure, do not mark posted so it can be retried later
         print("Slack post failed:", e)

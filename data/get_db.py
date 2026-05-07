@@ -11,7 +11,7 @@ conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
 # 2. 実行したいSQL文を書く（テーブル名は実際の名称に変更してください）
-sql = "SELECT url, slack_ts FROM articles"  # 例: articlesテーブルからurlのデータを取得するSQL文
+sql = "SELECT url, title FROM articles"  # 例: articlesテーブルからurlのデータを取得するSQL文
 
 # 3. SQLを実行してデータを取得する
 cursor.execute(sql)

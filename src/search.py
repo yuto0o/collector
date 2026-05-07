@@ -169,14 +169,14 @@ def fetch_from_searxng(domain: str, query: str = "", limit: int = 3, time_range:
         return 0
 
 
-def fetch_zenn_tag(tag: str = "python", limit: int = 3):
+def fetch_zenn_tag(tag: str = "python", limit: int = 3, time_range: str = ""):
     """Fetch article URLs for a given tag.
 
     Try SearXNG first, then fall back to Zenn's RSS feed.
     """
     logger.info(f"[SEARCH] Fetching Zenn articles for tag: {tag}")
     
-    count = fetch_from_searxng("zenn.dev", tag, limit)
+    count = fetch_from_searxng("zenn.dev", tag, limit, time_range=time_range)
     if count > 0:
         return
 

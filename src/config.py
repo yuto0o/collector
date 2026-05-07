@@ -22,6 +22,7 @@ class Config:
     LLAMA_MODEL: str = os.getenv("LLAMA_MODEL", "local-model")
     SLACK_BOT_TOKEN: str = os.getenv("SLACK_BOT_TOKEN", "")
     SLACK_CHANNEL_ID: str = os.getenv("SLACK_CHANNEL_ID", "")
+    SLACK_NEWS_CHANNEL_ID: str = os.getenv("SLACK_NEWS_CHANNEL_ID", "")
     DB_PATH: str = os.getenv("DB_PATH", "./data/collector.db")
     SEARXNG_URL: str = os.getenv("SEARXNG_URL", "http://searxng:8080")
     PARALLELISM: int = int(os.getenv("PARALLELISM", "10"))
@@ -35,106 +36,106 @@ class Config:
         {
             "name": "Zenn", 
             "domain": "zenn.dev", 
-            "keywords": ["Python", "LLM", "機械学習"],
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"],
             "index_urls": ["https://zenn.dev/topics/ai", "https://zenn.dev/topics/python"]
         },
         {
             "name": "Qiita", 
             "domain": "qiita.com", 
-            "keywords": ["Python", "LLM", "機械学習"],
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"],
             "index_urls": ["https://qiita.com/tags/python", "https://qiita.com/tags/llm"]
         },
         {
             "name": "DevelopersIO", 
             "domain": "dev.classmethod.jp", 
-            "keywords": ["Python", "LLM", "機械学習"],
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"],
             "index_urls": ["https://dev.classmethod.jp/"]
         },
         {
             "name": "note", 
             "domain": "note.com", 
-            "keywords": ["Python", "LLM", "機械学習"]
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"]
         },
         {
             "name": "Hatena Blog", 
             "domain": "hatena.ne.jp", 
-            "keywords": ["Python", "LLM", "機械学習"],
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"],
             "index_urls": ["https://developer.hatenastaff.com/"]
         },
         {
             "name": "Speaker Deck", 
             "domain": "speakerdeck.com", 
-            "keywords": ["Python", "LLM", "機械学習"]
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"]
         },
         {
             "name": "Connpass", 
             "domain": "connpass.com", 
-            "keywords": ["Python", "LLM", "機械学習"]
+            "keywords": ["Python", "LLM", "機械学習", "Generative AI", "Transformer"]
         },
         {
             "name": "Hugging Face", 
             "domain": "huggingface.co", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://huggingface.co/blog", "https://huggingface.co/papers"]
         },
         {
             "name": "arXiv", 
             "domain": "arxiv.org", 
-            "keywords": ["Python LLM", "Machine Learning"],
+            "keywords": ["Python LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://arxiv.org/list/cs.AI/recent", "https://arxiv.org/list/cs.CL/recent"]
         },
         {
             "name": "OpenAI", 
             "domain": "openai.com", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://openai.com/news/", "https://openai.com/index/research/"]
         },
         {
             "name": "Anthropic", 
             "domain": "anthropic.com", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://www.anthropic.com/news"]
         },
         {
             "name": "Google Research", 
             "domain": "research.google", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://research.google/blog/"]
         },
         {
             "name": "Meta AI", 
             "domain": "ai.meta.com", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://ai.meta.com/blog/", "https://engineering.fb.com/"]
         },
         {
             "name": "Microsoft Research", 
             "domain": "microsoft.com", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://www.microsoft.com/en-us/research/blog/"]
         },
         {
             "name": "Towards Data Science", 
             "domain": "towardsdatascience.com", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://towardsdatascience.com/"]
         },
         {
             "name": "LlamaIndex Blog", 
             "domain": "llamaindex.ai", 
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://www.llamaindex.ai/blog"]
         },
         {
             "name": "LangChain Blog",
             "domain": "langchain.dev",
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://blog.langchain.dev/"]
         },
         {
             "name": "Papers with Code",
             "domain": "paperswithcode.com",
-            "keywords": ["Python", "LLM", "Machine Learning"],
+            "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],
             "index_urls": ["https://paperswithcode.com/latest"]
         }
     ]

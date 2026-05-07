@@ -51,9 +51,9 @@ def run_fetch():
             
             logger.info(f"[WORKER] Searching SearXNG: {name} ({domain}) | keyword='{kw}'")
             if domain == "zenn.dev":
-                fetch_zenn_tag(kw or "python", limit=3)
+                fetch_zenn_tag(kw or "python", limit=3, time_range="month")
             else:
-                fetch_from_searxng(domain, kw, limit=3)
+                fetch_from_searxng(domain, kw, limit=3, time_range="month")
             
             sleep_range = cfg.DOMAIN_RATE_LIMIT.get(domain, cfg.DOMAIN_RATE_LIMIT["others"])
             s = random.uniform(*sleep_range)
@@ -123,13 +123,20 @@ def process_article(row, fast_filter=False):
         if summary:
             set_summary(url, summary, meta)
             
-            is_useful = meta.get("is_useful_for_python_student")
+            is_useful = meta.get("is_useful_for_python_student", False)
+            is_ai_news = meta.get("is_ai_news", False)
             importance = meta.get("importance", 0)
             
-            if is_useful is None:
-                is_useful = True
-            
-            # Double strict check: must be useful AND importance >= 4
+            # 1. Post to AI News channel if it's significant AI news
+            if is_ai_news:
+                logger.info(f"[WORKER] Posting significant AI News to Slack for {url}")
+                try:
+                    display_summary = f"🚀 *AI News Release*\n{summary}\n\n*Importance:* {importance}/5"
+                    post_summary(title, url, display_summary, channel_id=cfg.SLACK_NEWS_CHANNEL_ID)
+                except Exception as e:
+                    logger.error(f"Failed to post AI news for {url}: {e}")
+
+            # 2. Post to Python channel if it's useful (and importance >= 4)
             if is_useful and importance >= 4:
                 reason = meta.get("reason_for_usefulness", "")
                 logger.info(f"[WORKER] Posting summary to Slack for {url} (Importance: {importance})")
@@ -141,8 +148,9 @@ def process_article(row, fast_filter=False):
                     logger.info(f"[WORKER] Successfully posted summary for {url}")
                 except Exception as e:
                     logger.error(f"Failed to post summary for {url}: {e}")
-            else:
-                logger.info(f"Article skipped (Not useful enough or low importance): {url} (Useful={is_useful}, Importance={importance})")
+            
+            if not is_ai_news and not (is_useful and importance >= 4):
+                logger.info(f"Article skipped (Not useful enough or low importance): {url} (Useful={is_useful}, AI News={is_ai_news}, Importance={importance})")
         else:
             logger.warning(f"No summary generated for {url}")
 
