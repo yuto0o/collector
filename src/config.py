@@ -97,6 +97,12 @@ class Config:
             "index_urls": ["https://www.anthropic.com/news"]
         },
         {
+            "name": "Google Blog", 
+            "domain": "blog.google", 
+            "keywords": ["Gemma", "AI", "Machine Learning"],
+            "index_urls": ["https://blog.google/technology/ai/", "https://blog.google/technology/developers/"]
+        },
+        {
             "name": "Google Research", 
             "domain": "research.google", 
             "keywords": ["Python", "LLM", "Machine Learning", "Generative AI", "Transformer"],

@@ -4,4 +4,23 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "fastapi>=0.136.1",
+    "feedparser>=6.0.12",
+    "httpx>=0.28.1",
+    "lxml>=6.1.0",
+    "pydantic>=2.13.4",
+    "python-dotenv>=1.2.2",
+    "requests>=2.33.1",
+    "scrapling>=0.4.7",
+    "slack-sdk>=3.41.0",
+    "tenacity>=9.1.4",
+    "trafilatura>=2.0.0",
+    "uvicorn>=0.46.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

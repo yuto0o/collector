@@ -4,7 +4,7 @@ ENV PYTHONUNBUFFERED=1
 # system deps for lxml
 RUN apt-get update && apt-get install -y \
 	gcc libxml2-dev libxslt1-dev libpq-dev build-essential \
-	curl ca-certificates wget unzip tar && rm -rf /var/lib/apt/lists/*
+	curl ca-certificates wget unzip tar zlib1g-dev && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
 # Install python requirements

@@ -77,6 +77,23 @@ docker logs collector -f
 
 ---
 
+## 🔄 処理フロー
+システムは以下の4ステップで動作します。
+
+1.  **収集（Search & Fetch）**
+    *   `SearXNG` を用いた技術キーワード検索、`scrapling` による特定サイトのインデックスページ巡回、RSSフィードの読み込みを並行して行い、未処理のURLを抽出します。
+2.  **検証（Validation）**
+    *   `robots.txt` を取得・解析し、アクセス許可と `Crawl-delay` を確認します。
+    *   ドメインごとのクールダウン状態（429や接続エラー履歴）をチェックし、安全な場合のみ次へ進みます。
+3.  **抽出・整形（Scrape & Clean）**
+    *   `Trafilatura` をメインエンジンとして使用し、HTMLから広告・メニュー・フッターなどのノイズを完全に除去した **「純粋な本文テキスト」** を抽出します。
+    *   これにより、LLMの理解精度を高めると同時に、トークン消費量を最小限に抑制します。
+4.  **判定・通知（LLM & Notify）**
+    *   ローカルLLMが本文を解析し、「Python習熟者への有用性」と「重大なAIニュースか」を判定。
+    *   判定結果に基づき、適切なSlackチャンネルへ要約と判定理由を投稿します。
+
+---
+
 ## 主要機能
 1.  **インテリジェントな横断検索と直接収集**
     *   **マルチモード収集:** HTMLインデックスページの直接スクレイピング、SearXNGによる横断検索、RSSフィードの3層構造で記事を網羅。
@@ -104,7 +121,7 @@ docker logs collector -f
 
 ## 技術スタック
 *   **Search Engine:** SearXNG (Self-hosted)
-*   **Scraper:** Scrapling, BeautifulSoup, RobotParser
+*   **Scraper:** Trafilatura, Scrapling, BeautifulSoup, RobotParser
 *   **LLM Integration:** Llama API互換 (gpt-4o互換モード)
 *   **Database:** SQLite3
 *   **Stability:** Tenacity (Retry), Domain Round-Robin Scheduler, Classified Backoff

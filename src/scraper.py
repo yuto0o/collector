@@ -12,6 +12,12 @@ try:
 except ImportError:
     HAS_SCRAPLING_LIB = False
 
+try:
+    import trafilatura
+    HAS_TRAFILATURA = True
+except ImportError:
+    HAS_TRAFILATURA = False
+
 from .config import cfg, logger
 
 # Cache for robots.txt parsers to avoid re-fetching
@@ -78,7 +84,10 @@ def is_allowed_by_robots(url: str) -> tuple[bool, float]:
 def _do_scrape(url: str, headers: dict) -> dict:
     """Internal function with retry logic."""
     try:
-        # 1. Try Scrapling library directly
+        html_content = ""
+        title = ""
+
+        # 1. Try Scrapling library first (handles some dynamic content/better fetch)
         if HAS_SCRAPLING_LIB:
             try:
                 fetcher = Fetcher()
@@ -87,39 +96,53 @@ def _do_scrape(url: str, headers: dict) -> dict:
                 if status == 429:
                     raise TooManyRequestsError("429 Too Many Requests via Scrapling")
                 
+                html_content = getattr(page, "html", "") or getattr(page, "raw_content", "")
                 title = getattr(page, "title", "")
-                text = getattr(page, "text", "")
-                if title or text:
-                    return {"title": title, "text": text}
             except TooManyRequestsError:
                 raise
             except Exception as e:
-                logger.debug(f"[SCRAPE] Scrapling attempt failed: {e}")
+                logger.debug(f"[SCRAPE] Scrapling fetch failed: {e}")
 
-        # 2. Local fallback
-        resp = requests.get(url, timeout=cfg.GLOBAL_TIMEOUT, headers=headers)
-        if resp.status_code == 429:
-            raise TooManyRequestsError("429 Too Many Requests")
-        resp.raise_for_status()
-        
-        soup = BeautifulSoup(resp.content, "lxml")
-        main_content = soup.find(["article", "main", "div[role='main']"]) or soup.body or soup
-        if not main_content:
-            return {"title": "", "text": ""}
+        # 2. Local fetch fallback if Scrapling failed or returned empty
+        if not html_content:
+            resp = requests.get(url, timeout=cfg.GLOBAL_TIMEOUT, headers=headers)
+            if resp.status_code == 429:
+                raise TooManyRequestsError("429 Too Many Requests")
+            resp.raise_for_status()
+            html_content = resp.text
 
-        for tag in main_content.find_all(["script", "style", "nav", "aside", "header", "footer", "form"]):
-            tag.decompose()
+        # 3. Content Extraction using Trafilatura (High Quality)
+        text = ""
+        if HAS_TRAFILATURA and html_content:
+            try:
+                # extract() is the main function for content discovery
+                text = trafilatura.extract(html_content, include_comments=False, include_tables=True, no_fallback=False)
+                if not title:
+                    # Trafilatura can also extract metadata
+                    metadata = trafilatura.extract_metadata(html_content)
+                    if metadata:
+                        title = getattr(metadata, "title", "")
+            except Exception as e:
+                logger.warning(f"[SCRAPE] Trafilatura extraction failed for {url}: {e}")
+
+        # 4. Final Fallback to BeautifulSoup (Basic)
+        if not text and html_content:
+            soup = BeautifulSoup(html_content, "lxml")
+            main_content = soup.find(["article", "main", "div[role='main']"]) or soup.body or soup
+            if main_content:
+                for tag in main_content.find_all(["script", "style", "nav", "aside", "header", "footer", "form"]):
+                    tag.decompose()
+                    
+                paragraphs = [
+                    p.get_text(strip=True) for p in main_content.find_all(["p", "h1", "h2", "h3", "li"])
+                ]
+                text = "\n\n".join([p for p in paragraphs if p])
+                if not title:
+                    title_tag = soup.find("meta", attrs={"property": "og:title"}) or soup.find("title")
+                    if title_tag:
+                        title = title_tag.get("content") if title_tag.name == "meta" else title_tag.get_text()
             
-        paragraphs = [
-            p.get_text(strip=True) for p in main_content.find_all(["p", "h1", "h2", "h3", "li"])
-        ]
-        text = "\n\n".join([p for p in paragraphs if p])
-        title_tag = soup.find("meta", attrs={"property": "og:title"}) or soup.find("title")
-        title = ""
-        if title_tag:
-            title = title_tag.get("content") if title_tag.name == "meta" else title_tag.get_text()
-            
-        return {"title": title, "text": text}
+        return {"title": title.strip() if title else "", "text": text.strip() if text else ""}
     except requests.exceptions.ConnectionError as e:
         # Classify as DomainConnectionError for specialized cooldown
         raise DomainConnectionError(f"Connection failed: {e}")
